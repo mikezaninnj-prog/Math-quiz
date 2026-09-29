@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f8ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .quiz-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        #timer { color: #d9534f; }
+        #score { color: #5cb85c; }
+        .problem {
+            font-size: 2.5em;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        input[type="number"] {
+            font-size: 1.5em;
+            width: 100px;
+            text-align: center;
+            padding: 5px;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .feedback {
+            margin-top: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            height: 25px;
+        }
+        .correct { color: #2ecc71; }
+        .incorrect { color: #e74c3c; }
+        .hidden { display: none; }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .summary-table th, .summary-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .summary-table th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1>Math Challenge</h1>
+        <p>Answer as many addition and subtraction questions as you can in 3 minutes!</p>
+        <p>All answers are between 0 and 20.</p>
+        <button id="start-btn">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="hidden">
+        <div class="stats">
+            <div>Timer: <span id="timer">03:00</span></div>
+            <div>First Try Correct: <span id="score">0</span></div>
+        </div>
+        <div class="problem" id="problem-display">0 + 0 = ?</div>
+        <form id="answer-form" autocomplete="off">
+            <input type="number" id="user-answer" required min="0" max="20" autofocus>
+            <br>
+            <button type="submit" id="submit-btn">Submit</button>
+        </form>
+        <div id="feedback" class="feedback"></div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="hidden">
+        <h1>Quiz Complete!</h1>
+        <table class="summary-table">
+            <tr>
+                <th>Total Questions Attempted</th>
+                <td id="total-questions">0</td>
+            </tr>
+            <tr>
+                <th>Correct on First Try</th>
+                <td id="first-try-correct">0</td>
+            </tr>
+            <tr>
+                <th>Accuracy Grade</th>
+                <td id="grade-percentage" style="font-weight: bold;">0%</td>
+            </tr>
+        </table>
+        <br>
+        <button id="restart-btn">Try Again</button>
+    </div>
+</div>
+
+<script>
+    // App State Variables
+    let timeLeft = 180; // 3 minutes in seconds
+    let timerInterval;
+    let currentAnswer = 0;
+    let attemptsOnCurrentQuestion = 0;
+    let totalQuestionsAttempted = 0;
+    let firstTryCorrectCount = 0;
+
+    // DOM Elements
+    const startScreen = document.getElementById('start-screen');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultsScreen = document.getElementById('results-screen');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const timerDisplay = document.getElementById('timer');
+    const scoreDisplay = document.getElementById('score');
+    const problemDisplay = document.getElementById('problem-display');
+    const answerForm = document.getElementById('answer-form');
+    const userAnswerInput = document.getElementById('user-answer');
+    const feedbackDisplay = document.getElementById('feedback');
+    
+    const totalQuestionsDisplay = document.getElementById('total-questions');
+    const firstTryCorrectDisplay = document.getElementById('first-try-correct');
+    const gradePercentageDisplay = document.getElementById('grade-percentage');
+
+    // Event Listeners
+    startBtn.addEventListener('click', startQuiz);
+    restartBtn.addEventListener('click', startQuiz);
+    answerForm.addEventListener('submit', handleAnswerSubmit);
+
+    function startQuiz() {
+        // Reset Variables
+        timeLeft = 180;
+        attemptsOnCurrentQuestion = 0;
+        totalQuestionsAttempted = 0;
+        firstTryCorrectCount = 0;
+        
+        // UI Updates
+        scoreDisplay.textContent = '0';
+        feedbackDisplay.textContent = '';
+        userAnswerInput.value = '';
+        
+        startScreen.classList.add('hidden');
+        resultsScreen.classList.add('hidden');
+        quizScreen.classList.remove('hidden');
+        
+        userAnswerInput.focus();
+        
+        // Start Loops
+        generateProblem();
+        updateTimerDisplay();
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+        timeLeft--;
+        updateTimerDisplay();
+        
+        if (timeLeft <= 0) {
+            endQuiz();
+        }
+    }
+
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function generateProblem() {
+        attemptsOnCurrentQuestion = 0;
+        const isAddition = Math.random() < 0.5;
+        
+        let num1, num2, operation;
+        
+        if (isAddition) {
+            // Answer up to 20 means num1 + num2 <= 20
+            currentAnswer = Math.floor(Math.random() * 21); // 0 to 20
+            num1 = Math.floor(Math.random() * (currentAnswer + 1)); // 0 to currentAnswer
+            num2 = currentAnswer - num1;
+            operation = '+';
+        } else {
+            // Subtraction answer up to 20, starting number up to 20 to keep it simple
+            num1 = Math.floor(Math.random() * 21); // 0 to 20
+            num2 = Math.floor(Math.random() * (num1 + 1)); // 0 to num1
+            currentAnswer = num1 - num2;
+            operation = '-';
+        }
+
+        problemDisplay.textContent = `${num1} ${operation} ${num2} = ?`;
+    }
+
+    function handleAnswerSubmit(e) {
+        e.preventDefault();
+        const userAnswer = parseInt(userAnswerInput.value, 10);
+        attemptsOnCurrentQuestion++;
+
+        if (userAnswer === currentAnswer) {
+            feedbackDisplay.textContent = "Correct!";
+            feedbackDisplay.className = "feedback correct";
+            
+            if (attemptsOnCurrentQuestion === 1) {
+                firstTryCorrectCount++;
+                scoreDisplay.textContent = firstTryCorrectCount;
+            }
+            
+            totalQuestionsAttempted++;
+            
+            // Brief pause so student can see "Correct!" feedback
+            userAnswerInput.value = '';
+            generateProblem();
+        } else {
+            feedbackDisplay.textContent = "Try again!";
+            feedbackDisplay.className = "feedback incorrect";
+            userAnswerInput.select();
+            
+            // If they failed on the first attempt, mark this problem as tracked
+            if (attemptsOnCurrentQuestion === 1) {
+                totalQuestionsAttempted++;
+            }
+        }
+    }
+
+    function endQuiz() {
+        clearInterval(timerInterval);
+        quizScreen.classList.add('hidden');
+        resultsScreen.classList.remove('hidden');
+
+        // Calculate Grade
+        totalQuestionsDisplay.textContent = totalQuestionsAttempted;
+        firstTryCorrectDisplay.textContent = firstTryCorrectCount;
+        
+        const percentage = totalQuestionsAttempted > 0 
+            ? Math.round((firstTryCorrectCount / totalQuestionsAttempted) * 100) 
+            : 0;
+            
+        gradePercentageDisplay.textContent = `${percentage}%`;
+    }
+</script>
+
+</body>
+</html>
